@@ -1,107 +1,111 @@
-
+import os
 import streamlit as st
+from dotenv import load_dotenv
+from google import genai
+from google.genai import types
 
-st.title("Unit Converter")
+# Load environment variables
+load_dotenv()
 
-units = [
-    "Meters",
-    "Centimeters",
-    "Kilometers",
-    "Millimeters",
-    "Inches",
-    "Feet",
-    "Yards",
-    "Miles"
-]
+# Function to generate AI response
+def generate_response(user_input):
+    api_key = os.getenv("GEMINI_API_KEY")
+    
+    if not api_key:
+        st.error("GEMINI_API_KEY not found in environment variables.")
+        return "Error: API Key not found."
 
-from_unit = st.selectbox("From Unit:", units)
-to_unit = st.selectbox("To Unit:", units)
+    client = genai.Client(api_key=api_key)
+    model = "gemini-2.0-flash"
+    
+    contents = [
+        types.Content(
+            role="user",
+            parts=[types.Part.from_text(text=user_input)],
+        ),
+    ]
+    
+    generate_content_config = types.GenerateContentConfig(
+        temperature=1,
+        top_p=0.95,
+        top_k=40,
+        max_output_tokens=8192,
+        response_mime_type="text/plain",
+        system_instruction=[
+            types.Part.from_text(
+                text="Provide responses only for unit conversion questions. If not a unit conversion question, kindly ask them to provide a valid query."
+            ),
+        ],
+    )
 
-value = st.number_input("Enter the value to convert:", value=0.0, format="%.4f")
+    response_text = ""
+    for chunk in client.models.generate_content_stream(
+        model=model, contents=contents, config=generate_content_config
+    ):
+        response_text += chunk.text
 
-conversion_factors = {
-    "Meters": {
-        "Meters": lambda x: x,
-        "Centimeters": lambda x: x * 100,
-        "Kilometers": lambda x: x / 1000,
-        "Millimeters": lambda x: x * 1000,
-        "Inches": lambda x: x * 39.3700787,
-        "Feet": lambda x: x * 3.2808399,
-        "Yards": lambda x: x * 1.0936133,
-        "Miles": lambda x: x / 1609.344
-    },
-    "Centimeters": {
-        "Meters": lambda x: x / 100,
-        "Centimeters": lambda x: x,
-        "Kilometers": lambda x: x / 100000,
-        "Millimeters": lambda x: x * 10,
-        "Inches": lambda x: x * 0.393700787,
-        "Feet": lambda x: x * 0.032808399,
-        "Yards": lambda x: x * 0.010936133,
-        "Miles": lambda x: x / 160934.4
-    },
-    "Kilometers": {
-        "Meters": lambda x: x * 1000,
-        "Centimeters": lambda x: x * 100000,
-        "Kilometers": lambda x: x,
-        "Millimeters": lambda x: x * 1000000,
-        "Inches": lambda x: x * 39370.0787,
-        "Feet": lambda x: x * 3280.8399,
-        "Yards": lambda x: x * 1093.6133,
-        "Miles": lambda x: x / 1.609344
-    },
-    "Millimeters": {
-        "Meters": lambda x: x / 1000,
-        "Centimeters": lambda x: x / 10,
-        "Kilometers": lambda x: x / 1000000,
-        "Millimeters": lambda x: x,
-        "Inches": lambda x: x * 0.0393700787,
-        "Feet": lambda x: x * 0.0032808399,
-        "Yards": lambda x: x * 0.0010936133,
-        "Miles": lambda x: x / 1609344
-    },
-    "Inches": {
-        "Meters": lambda x: x * 0.0254,
-        "Centimeters": lambda x: x * 2.54,
-        "Kilometers": lambda x: x * 2.54e-5,
-        "Millimeters": lambda x: x * 25.4,
-        "Inches": lambda x: x,
-        "Feet": lambda x: x / 12,
-        "Yards": lambda x: x / 36,
-        "Miles": lambda x: x / 63360
-    },
-    "Feet": {
-        "Meters": lambda x: x * 0.3048,
-        "Centimeters": lambda x: x * 30.48,
-        "Kilometers": lambda x: x * 0.0003048,
-        "Millimeters": lambda x: x * 304.8,
-        "Inches": lambda x: x * 12,
-        "Feet": lambda x: x,
-        "Yards": lambda x: x / 3,
-        "Miles": lambda x: x / 5280
-    },
-    "Yards": {
-        "Meters": lambda x: x * 0.9144,
-        "Centimeters": lambda x: x * 91.44,
-        "Kilometers": lambda x: x * 0.0009144,
-        "Millimeters": lambda x: x * 914.4,
-        "Inches": lambda x: x * 36,
-        "Feet": lambda x: x * 3,
-        "Yards": lambda x: x,
-        "Miles": lambda x: x / 1760
-    },
-    "Miles": {
-        "Meters": lambda x: x * 1609.344,
-        "Centimeters": lambda x: x * 160934.4,
-        "Kilometers": lambda x: x * 1.609344,
-        "Millimeters": lambda x: x * 1.609344e+6,
-        "Inches": lambda x: x * 63360,
-        "Feet": lambda x: x * 5280,
-        "Yards": lambda x: x * 1760,
-        "Miles": lambda x: x
+    return response_text
+
+# ---- STREAMLIT UI ----
+st.set_page_config(page_title="AI Unit Converter", page_icon="⚡", layout="centered")
+
+# Custom CSS for improved UI
+st.markdown("""
+    <style>
+    body {
+        font-family: 'Arial', sans-serif;
+        background-color: #f8f9fa;
     }
-}
+    .chat-container {
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    }
+    .user-message {
+        text-align: right;
+        background-color: #007bff;
+        color: white;
+        padding: 10px;
+        border-radius: 10px;
+        max-width: 60%;
+        margin-left: auto;
+    }
+    .bot-message {
+        text-align: left;
+        color:black;
+        margin-top:10px;
+        background-color: #e9ecef;
+        padding: 10px;
+        border-radius: 10px;
+        max-width: 60%;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-converted_value = conversion_factors[from_unit][to_unit](value)
+# Chat UI
+st.title("⚡ AI Unit Converter")
+st.write("Ask me any unit conversion question!")
 
-st.write(f"**Result:** {value} {from_unit} = {converted_value} {to_unit}")
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
+user_input = st.text_input("You: ", placeholder="Enter your unit conversion question...")
+
+if st.button("Ask AI", use_container_width=True):
+    if user_input.strip():
+        response = generate_response(user_input)
+        
+        # Save chat history
+        st.session_state.chat_history.append(("You", user_input))
+        st.session_state.chat_history.append(("AI", response))
+
+# Display Chat History
+st.subheader("Chat History")
+chat_container = st.container()
+with chat_container:
+    for role, text in st.session_state.chat_history:
+        if role == "You":
+            st.markdown(f"<div class='user-message'>{text}</div>", unsafe_allow_html=True)
+        else:
+            st.markdown(f"<div class='bot-message'>{text}</div>", unsafe_allow_html=True)
