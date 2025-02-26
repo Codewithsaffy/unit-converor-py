@@ -70,6 +70,7 @@ st.markdown("""
         border-radius: 10px;
         max-width: 60%;
         margin-left: auto;
+        margin-top:10px;
     }
     .bot-message {
         text-align: left;
