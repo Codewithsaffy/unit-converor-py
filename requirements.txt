@@ -1,5 +1,4 @@
-plotly
-streamlit
-pandas
-google-generativeai
-python-dotenv
+streamlit 
+dotenv  
+google  
+google.genai  
