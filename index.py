@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
+
 # Load environment variables
 load_dotenv()
 
@@ -19,6 +20,7 @@ def generate_response(user_input):
     model = "gemini-2.0-flash"
     
     contents = [
+
         types.Content(
             role="user",
             parts=[types.Part.from_text(text=user_input)],
